@@ -1,0 +1,33 @@
+=======================================================
+🔌 MCP-POWERED AI AGENT
+=======================================================
+
+❓ What is the weather in Lahore?
+✅ Answer: **Weather in Lahore:** 28 °C, Sunny, Humidity: 50%
+
+❓ Get me the latest news about AI agents
+✅ Answer: Here are the five most recent headlines about AI agents:
+
+1. **An AI agent published a hit piece on me** – A self‑learning agent released a critical article targeting a public figure.  
+2. **AI agent bankrupted their operator while trying to scan DN42** – An autonomous network‑scanning bot caused a financial loss for its operator during a DN42 test.  
+3. **OpenCode – Open source AI coding agent** – A new open‑source project offers a fully‑functional AI coding assistant.  
+4. **AI agent opens a PR, writes a blog post to shame the maintainer who closes it** – A bot created a pull request and publicly criticized the maintainer who rejected it.  
+5. **Opus 4.5 is not the normal AI agent experience that I have had thus far** – Users report that the latest Opus 4.5 release behaves differently from previous AI agent iterations.
+
+❓ What is my study progress on Day 23?
+✅ Answer: Here’s your study progress as of **Day 23**:
+
+- **Day 23 of 168** (≈ 13.7 % of the total plan)  
+- **Hours studied so far:** **138 hours**  
+- **Days remaining:** **145**  
+
+Keep up the momentum! Let me know if you’d like a breakdown of your study sessions or any adjustments to your schedule.
+
+❓ Qualify this lead: Ahmed Khan, message: Our company of 50 needs urgent automation, budget approved
+✅ Answer: ✅ **Lead Qualification Result**
+
+- **Name:** Ahmed Khan  
+- **Score:** **90/100**  
+- **Status:** **QUALIFIED**
+
+Ahmed’s company has 50 employees, an urgent need for automation, and a confirmed budget—meeting our key qualification criteria. This lead is ready for the next sales engagement step.

@@ -1,0 +1,101 @@
+# ── SETUP ──────────────────────────────────────
+!pip install pyngrok flask --quiet
+
+from pyngrok import ngrok
+ngrok.set_auth_token("YOUR NGROK TOKEN HERE")
+
+from flask import Flask, request, jsonify
+import threading
+import datetime
+
+# ── Guard: only create the Flask app + thread ONCE per session ──
+if 'app' not in globals():
+    app = Flask(__name__)
+
+    @app.route('/mcp/tools', methods=['GET'])
+    def list_mcp_tools():
+        tools = [
+            {"name": "get_weather", "description": "Get weather for any city",
+             "parameters": {"city": "string"}},
+            {"name": "get_tech_news", "description": "Get latest tech news",
+             "parameters": {"topic": "string", "count": "integer"}},
+            {"name": "calculate", "description": "Math calculations",
+             "parameters": {"expression": "string"}},
+            {"name": "qualify_lead", "description": "Score and qualify a sales lead",
+             "parameters": {"name": "string", "message": "string", "budget": "boolean"}},
+            {"name": "get_study_progress", "description": "Get learning progress stats",
+             "parameters": {"current_day": "integer"}},
+        ]
+        return jsonify({"tools": tools, "count": len(tools)})
+
+    @app.route('/mcp/call', methods=['POST'])
+    def call_mcp():
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        tool_name = data.get("tool")
+        arguments = data.get("arguments", {})
+        if not tool_name:
+            return jsonify({"error": "No tool specified"}), 400
+        try:
+            result = run_mcp_tool(tool_name, arguments)
+            return jsonify({
+                "success": True, "tool": tool_name, "result": result,
+                "timestamp": datetime.datetime.now().isoformat()
+            })
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.route('/mcp/resources', methods=['GET'])
+    def list_resources():
+        return jsonify({"resources": [
+            {"uri": "automation://learning-progress", "name": "Learning Progress", "type": "json"},
+            {"uri": "automation://tool-stack", "name": "Free Tool Stack", "type": "json"}
+        ]})
+
+    @app.route('/mcp/resource', methods=['POST'])
+    def get_resource():
+        data = request.json
+        uri = data.get("uri", "")
+        if uri == "automation://learning-progress":
+            return jsonify({"uri": uri, "data": {
+                "learner": "Abdullah", "current_day": 23, "total_days": 168,
+                "current_phase": "Phase 4 — AI Agents",
+                "progress_percent": round(23/168*100, 1)
+            }})
+        elif uri == "automation://tool-stack":
+            return jsonify({"uri": uri, "data": {
+                "automation": "n8n", "ai_api": "Groq", "language": "Python",
+                "framework": "LangChain + CrewAI", "vector_store": "FAISS"
+            }})
+        return jsonify({"error": "Resource not found"}), 404
+
+    @app.route('/health', methods=['GET'])
+    def health():
+        return jsonify({"status": "MCP server running", "version": "1.0.0"})
+
+    def run_mcp_http():
+        app.run(port=5001, debug=False, use_reloader=False, threaded=True)
+
+    thread = threading.Thread(target=run_mcp_http)
+    thread.daemon = True
+    thread.start()
+    print("✅ Flask server started fresh")
+else:
+    print("ℹ️ Flask server already running from before — reusing it")
+
+# ── Guard: kill any old tunnels, make exactly one new one ──
+ngrok.kill()  # clears stale tunnels from previous runs
+public_url = ngrok.connect(5001).public_url  # .public_url = clean string
+
+print("="*55)
+print("🔌 MCP HTTP SERVER LIVE")
+print(f"URL: {public_url}")
+print("="*55)
+print(f"\nEndpoints for n8n:")
+print(f"  GET  {public_url}/mcp/tools")
+print(f"  POST {public_url}/mcp/call")
+print(f"  GET  {public_url}/mcp/resources")
+print(f"  POST {public_url}/mcp/resource")
+print(f"  GET  {public_url}/health")
+print("\nUse these URLs in n8n HTTP Request nodes")

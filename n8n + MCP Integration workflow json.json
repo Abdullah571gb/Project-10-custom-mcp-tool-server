@@ -1,0 +1,180 @@
+{
+  "name": "n8n + MCP Integration",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        16
+      ],
+      "id": "5f508990-1266-4491-9449-3c104887f629",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "chatId": "8997603873",
+        "text": "={{ $json.result }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        768,
+        16
+      ],
+      "id": "39adb51f-0d47-4f05-9443-5f15864a1661",
+      "name": "Send a text message",
+      "webhookId": "fe23a83d-8f40-4de6-aacf-368dc600ae49",
+      "credentials": {
+        "telegramApi": {
+          "id": "WhiOzKx7EA8lr6MJ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://finless-snare-catty.ngrok-free.dev/mcp/tools",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tool\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Lahore\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -32,
+        16
+      ],
+      "id": "a36fffd6-2636-4494-8401-0c26aa1e96da",
+      "name": "List MCP Tools"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://finless-snare-catty.ngrok-free.dev/mcp/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tool\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Lahore\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        176,
+        16
+      ],
+      "id": "e8710dfe-bc71-44e1-94bf-0ceaf23b75a3",
+      "name": "Call Weather Tool"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://finless-snare-catty.ngrok-free.dev/mcp/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tool\": \"get_tech_news\",\n  \"arguments\": {\n    \"topic\": \"AI agents MCP\",\n    \"count\": 3\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        384,
+        16
+      ],
+      "id": "80e95769-eee7-404d-a7db-eb18d2ebf545",
+      "name": "Call News Tool"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://finless-snare-catty.ngrok-free.dev/mcp/call",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tool\": \"format_automation_report\",\n  \"arguments\": {\n    \"title\": \"Daily AI Briefing\",\n    \"data\": {\n      \"Weather\": \"{{ $('Call Weather Tool').item.json.result }}\",\n      \"Top News\": \"{{ $('Call News Tool').item.json.result.replace(/\\n/g, ' ') }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        592,
+        16
+      ],
+      "id": "1d0f9897-6c6a-4222-b828-a19d4bc7ff95",
+      "name": "Format Report"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "List MCP Tools",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List MCP Tools": {
+      "main": [
+        [
+          {
+            "node": "Call Weather Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Weather Tool": {
+      "main": [
+        [
+          {
+            "node": "Call News Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call News Tool": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Report": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e5ceeba0-b2c4-4983-bf21-e483117178af",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "721cf6432c0f21dd1d3df6b8b81cb1ad833f6cd71ef46123545371f59d776c6e"
+  },
+  "nodeGroups": [],
+  "id": "aLSDShknSdklxmOo",
+  "tags": []
+}

@@ -1,0 +1,737 @@
+# Install MCP
+!pip install mcp anthropic --quiet
+print("✅ MCP installed")
+
+# Check if Node.js is available in Colab
+!node --version
+!npx --version
+
+# Install Node.js in Colab
+!apt-get install -y nodejs npm --quiet
+!node --version
+print("✅ Node.js installed")
+
+!pip install mcp-server-fetch --quiet
+print("✅ Fetch MCP server installed")
+
+import sys
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+params = StdioServerParameters(command=sys.executable, args=["-m", "mcp_server_fetch"])
+
+async with stdio_client(params, errlog=sys.__stderr__) as (read, write):
+    async with ClientSession(read, write) as session:
+        await session.initialize()
+        tools = await session.list_tools()
+        print([t.name for t in tools.tools])
+
+# Update package list and install Node.js 20.x directly
+!curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+!apt-get install -y nodejs
+
+# Install filesystem MCP server
+!npm install -g @modelcontextprotocol/server-filesystem --quiet
+print("✅ Filesystem MCP server installed")
+
+# Create the MCP server file
+mcp_server_code = '''
+#!/usr/bin/env python3
+"""
+Custom MCP Server — AI Automation Tools
+Provides tools for AI automation learning and business tasks
+"""
+
+import asyncio
+import json
+import requests
+import datetime
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp import types
+
+# Create the MCP server instance
+server = Server("ai-automation-tools")
+
+# ─── TOOL 1 — Weather Tool ─────────────────────────
+
+@server.list_tools()
+async def list_tools() -> list[types.Tool]:
+    """List all available tools in this server"""
+    return [
+        types.Tool(
+            name="get_weather",
+            description="Get current weather for any city",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "city": {
+                        "type": "string",
+                        "description": "City name to get weather for"
+                    }
+                },
+                "required": ["city"]
+            }
+        ),
+        types.Tool(
+            name="get_tech_news",
+            description="Get latest technology and AI news headlines",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "Topic to search news for"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of news items (default 5)",
+                        "default": 5
+                    }
+                },
+                "required": ["topic"]
+            }
+        ),
+        types.Tool(
+            name="calculate",
+            description="Perform mathematical calculations",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "Math expression to calculate"
+                    }
+                },
+                "required": ["expression"]
+            }
+        ),
+        types.Tool(
+            name="qualify_lead",
+            description="Qualify a sales lead using AI scoring",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Lead name"
+                    },
+                    "company": {
+                        "type": "string",
+                        "description": "Company name"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Lead message or description"
+                    },
+                    "budget": {
+                        "type": "boolean",
+                        "description": "Do they have budget?"
+                    }
+                },
+                "required": ["name", "message"]
+            }
+        ),
+        types.Tool(
+            name="get_study_progress",
+            description="Get Abdullah learning journey progress",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "current_day": {
+                        "type": "integer",
+                        "description": "Current day number in the journey"
+                    }
+                },
+                "required": ["current_day"]
+            }
+        ),
+        types.Tool(
+            name="format_automation_report",
+            description="Format automation results into a professional report",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Report title"
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Report data as key-value pairs"
+                    }
+                },
+                "required": ["title", "data"]
+            }
+        )
+    ]
+
+# ─── TOOL IMPLEMENTATIONS ──────────────────────────
+
+@server.call_tool()
+async def call_tool(
+    name: str,
+    arguments: dict
+) -> list[types.TextContent]:
+    """Handle tool calls from the AI"""
+
+    # ── Weather ────────────────────────────────────
+    if name == "get_weather":
+        city = arguments["city"]
+        try:
+            url = f"https://wttr.in/{city}?format=j1"
+            r = requests.get(url, timeout=10)
+            d = r.json()["current_condition"][0]
+
+            result = f"""Weather in {city}:
+🌡️ Temperature: {d['temp_C']}°C
+🤔 Feels like: {d['FeelsLikeC']}°C
+☁️  Condition: {d['weatherDesc'][0]['value']}
+💧 Humidity: {d['humidity']}%
+💨 Wind: {d['windspeedKmph']} km/h
+📅 Updated: {datetime.datetime.now().strftime('%H:%M')}"""
+
+        except Exception as e:
+            result = f"Could not get weather for {city}: {e}"
+
+        return [types.TextContent(type="text", text=result)]
+
+    # ── Tech News ──────────────────────────────────
+    elif name == "get_tech_news":
+        topic = arguments["topic"]
+        count = arguments.get("count", 5)
+        try:
+            url = f"https://hn.algolia.com/api/v1/search?query={topic}&hitsPerPage={count}&tags=story"
+            r = requests.get(url, timeout=10)
+            hits = r.json().get("hits", [])
+
+            news_lines = [f"Latest news about '{topic}':"]
+            for i, h in enumerate(hits, 1):
+                title = h.get("title", "")
+                points = h.get("points", 0)
+                url_link = h.get("url", "")
+                news_lines.append(f"{i}. {title} ({points} pts)")
+                if url_link:
+                    news_lines.append(f"   Link: {url_link}")
+
+            result = "\\n".join(news_lines)
+
+        except Exception as e:
+            result = f"Could not get news: {e}"
+
+        return [types.TextContent(type="text", text=result)]
+
+    # ── Calculator ─────────────────────────────────
+    elif name == "calculate":
+        expression = arguments["expression"]
+        try:
+            import math
+            safe_dict = {
+                "math": math,
+                "sqrt": math.sqrt,
+                "pi": math.pi,
+                "abs": abs,
+                "round": round
+            }
+            result_val = eval(expression, {"__builtins__": {}}, safe_dict)
+            result = f"Calculation: {expression} = {result_val}"
+        except Exception as e:
+            result = f"Calculation error: {e}"
+
+        return [types.TextContent(type="text", text=result)]
+
+    # ── Lead Qualifier ─────────────────────────────
+    elif name == "qualify_lead":
+        name = arguments["name"]
+        company = arguments.get("company", "Unknown")
+        message = arguments["message"]
+        has_budget = arguments.get("budget", False)
+
+        # Simple scoring without AI (MCP server should be fast)
+        score = 50
+        reasons = []
+
+        # Score based on message keywords
+        high_intent = ["urgent", "asap", "immediately", "budget approved",
+                      "ready to start", "need help now", "decision made"]
+        medium_intent = ["interested", "considering", "exploring",
+                        "want to learn", "looking into"]
+        low_intent = ["just browsing", "curious", "maybe", "not sure",
+                     "student", "learning"]
+
+        message_lower = message.lower()
+
+        for keyword in high_intent:
+            if keyword in message_lower:
+                score += 15
+                reasons.append(f"High intent: '{keyword}'")
+                break
+
+        for keyword in medium_intent:
+            if keyword in message_lower:
+                score += 5
+                reasons.append(f"Medium intent: '{keyword}'")
+                break
+
+        for keyword in low_intent:
+            if keyword in message_lower:
+                score -= 20
+                reasons.append(f"Low intent: '{keyword}'")
+                break
+
+        if has_budget:
+            score += 20
+            reasons.append("Has confirmed budget")
+
+        if company and company != "Unknown":
+            score += 10
+            reasons.append("Company information provided")
+
+        score = max(0, min(100, score))
+
+        if score >= 70:
+            status = "QUALIFIED"
+            action = "Schedule demo call within 24 hours"
+        elif score >= 50:
+            status = "POTENTIAL"
+            action = "Add to nurture email sequence"
+        else:
+            status = "UNQUALIFIED"
+            action = "Archive for 3 months follow-up"
+
+        result = f"""Lead Qualification Result:
+Name: {name}
+Company: {company}
+Score: {score}/100
+Status: {status}
+Action: {action}
+Reasons: {', '.join(reasons) if reasons else 'Standard scoring'}"""
+
+        return [types.TextContent(type="text", text=result)]
+
+    # ── Study Progress ─────────────────────────────
+    elif name == "get_study_progress":
+        day = arguments["current_day"]
+        total_days = 168
+        hours_per_day = 6
+        hours_done = day * hours_per_day
+        total_hours = total_days * hours_per_day
+        percent = round((day / total_days) * 100, 1)
+        days_left = total_days - day
+
+        phases = []
+        if day >= 1:
+            phases.append("✅ Phase 1: AI Foundations (Days 1-14)")
+        if day >= 15:
+            phases.append("✅ Phase 2: n8n Automation (Days 15-42)")
+        if day >= 43:
+            phases.append("✅ Phase 3: Python (Days 43-84)")
+        if day >= 85:
+            phases.append("🔄 Phase 4: AI Agents (Days 85-126)")
+        if day >= 127:
+            phases.append("🔄 Phase 5: Expert Level (Days 127-168)")
+
+        result = f"""Abdullah's Study Progress:
+📅 Day: {day} of {total_days}
+📊 Progress: {percent}%
+⏱️  Hours studied: {hours_done} of {total_hours}
+📆 Days remaining: {days_left}
+⏰ Hours remaining: {days_left * hours_per_day}
+
+Phases:
+{chr(10).join(phases)}
+
+Keep going! You are {percent}% of the way to expert level."""
+
+        return [types.TextContent(type="text", text=result)]
+
+    # ── Report Formatter ───────────────────────────
+    elif name == "format_automation_report":
+        title = arguments["title"]
+        data = arguments["data"]
+
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        report_lines = [
+            f"{'='*50}",
+            f"📊 {title.upper()}",
+            f"Generated: {timestamp}",
+            f"{'='*50}",
+            ""
+        ]
+
+        for key, value in data.items():
+            report_lines.append(f"• {key}: {value}")
+
+        report_lines.append(f"{'='*50}")
+
+        result = "\\n".join(report_lines)
+        return [types.TextContent(type="text", text=result)]
+
+    else:
+        return [types.TextContent(
+            type="text",
+            text=f"Unknown tool: {name}"
+        )]
+
+# ─── RESOURCES ─────────────────────────────────────
+
+@server.list_resources()
+async def list_resources() -> list[types.Resource]:
+    """List available resources"""
+    return [
+        types.Resource(
+            uri="automation://learning-progress",
+            name="Learning Progress",
+            description="Abdullah current learning progress data",
+            mimeType="application/json"
+        ),
+        types.Resource(
+            uri="automation://tool-stack",
+            name="Free Tool Stack",
+            description="Complete list of free tools being used",
+            mimeType="application/json"
+        )
+    ]
+
+@server.read_resource()
+async def read_resource(uri: str) -> str:
+    """Read resource content"""
+
+    if uri == "automation://learning-progress":
+        data = {
+            "learner": "Abdullah",
+            "current_day": 23,
+            "total_days": 168,
+            "hours_per_day": 6,
+            "current_phase": "Phase 4 — AI Agents",
+            "completed_phases": [
+                "Phase 1: AI Foundations",
+                "Phase 2: n8n Automation",
+                "Phase 3: Python"
+            ],
+            "current_topics": [
+                "AI Agents (n8n)",
+                "LangChain",
+                "CrewAI",
+                "RAG Systems",
+                "MCP Protocol"
+            ]
+        }
+        return json.dumps(data, indent=2)
+
+    elif uri == "automation://tool-stack":
+        data = {
+            "automation": "n8n (self-hosted free)",
+            "ai_api": "Groq (free tier)",
+            "language": "Python (Google Colab free)",
+            "database": "Google Sheets (free)",
+            "notifications": "Telegram (free bot)",
+            "knowledge_base": "Notion (free plan)",
+            "version_control": "GitHub (free)",
+            "api_testing": "Hoppscotch (free)",
+            "agent_framework": "LangChain + CrewAI (free)",
+            "vector_store": "FAISS (free local)",
+            "embeddings": "HuggingFace (free)"
+        }
+        return json.dumps(data, indent=2)
+
+    raise ValueError(f"Unknown resource: {uri}")
+
+# ─── PROMPTS ───────────────────────────────────────
+
+@server.list_prompts()
+async def list_prompts() -> list[types.Prompt]:
+    """List available prompt templates"""
+    return [
+        types.Prompt(
+            name="qualify_lead_prompt",
+            description="Prompt template for qualifying a sales lead",
+            arguments=[
+                types.PromptArgument(
+                    name="lead_info",
+                    description="Information about the lead",
+                    required=True
+                )
+            ]
+        ),
+        types.Prompt(
+            name="daily_briefing_prompt",
+            description="Prompt for generating daily briefing",
+            arguments=[
+                types.PromptArgument(
+                    name="date",
+                    description="Today's date",
+                    required=True
+                )
+            ]
+        )
+    ]
+
+@server.get_prompt()
+async def get_prompt(
+    name: str,
+    arguments: dict | None
+) -> types.GetPromptResult:
+    """Get a specific prompt template"""
+
+    if name == "qualify_lead_prompt":
+        lead_info = arguments.get("lead_info", "") if arguments else ""
+        return types.GetPromptResult(
+            description="Lead qualification prompt",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"""You are a sales qualification expert.
+Analyze this lead and provide a qualification score and recommendation.
+
+Lead Information:
+{lead_info}
+
+Provide:
+1. Qualification score (0-100)
+2. BANT analysis (Budget, Authority, Need, Timeline)
+3. Recommended next action
+4. Personalized outreach message"""
+                    )
+                )
+            ]
+        )
+
+    elif name == "daily_briefing_prompt":
+        date = arguments.get("date", "today") if arguments else "today"
+        return types.GetPromptResult(
+            description="Daily briefing prompt",
+            messages=[
+                types.PromptMessage(
+                    role="user",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"""Create a professional daily briefing for {date}.
+
+Include:
+1. Weather summary for Lahore
+2. Top 3 AI automation news
+3. Today's learning focus
+4. Motivational message
+5. Key tasks to complete
+
+Format it as a clean morning briefing message."""
+                    )
+                )
+            ]
+        )
+
+    raise ValueError(f"Unknown prompt: {name}")
+
+# ─── MAIN ──────────────────────────────────────────
+
+async def main():
+    """Run the MCP server"""
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            server.create_initialization_options()
+        )
+
+if __name__ == "__main__":
+    asyncio.run(main())
+'''
+
+# Save server file
+with open("ai_automation_mcp_server.py", "w") as f:
+    f.write(mcp_server_code)
+
+print("✅ MCP server file created: ai_automation_mcp_server.py")
+
+import subprocess
+import json
+
+def test_mcp_server():
+    """Test the MCP server by sending it messages"""
+
+    print("Testing MCP server...")
+
+    # Initialize message
+    init_message = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "roots": {"listChanged": True},
+                "sampling": {}
+            },
+            "clientInfo": {
+                "name": "test-client",
+                "version": "1.0.0"
+            }
+        }
+    }
+
+    # List tools message
+    list_tools_message = {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    }
+
+    print("\n📋 MCP Server Tools Available:")
+    print("  1. get_weather — Get weather for any city")
+    print("  2. get_tech_news — Get latest tech news")
+    print("  3. calculate — Math calculations")
+    print("  4. qualify_lead — Score sales leads")
+    print("  5. get_study_progress — Track learning progress")
+    print("  6. format_automation_report — Format reports")
+
+    print("\n📂 MCP Server Resources Available:")
+    print("  • automation://learning-progress")
+    print("  • automation://tool-stack")
+
+    print("\n💬 MCP Server Prompts Available:")
+    print("  • qualify_lead_prompt")
+    print("  • daily_briefing_prompt")
+
+    print("\n✅ MCP Server ready to accept connections")
+
+test_mcp_server()
+
+# ── SETUP ──────────────────────────────────────
+!pip install -U langchain-groq --quiet
+
+from google.colab import userdata
+GROQ_API_KEY = userdata.get("GROQ_API_KEY")
+
+import json
+import datetime
+import math
+import requests
+
+# ── MCP TOOL LOGIC (SYNC) ──────────────────────
+def run_mcp_tool(tool_name: str, arguments: dict) -> str:
+    if tool_name == "get_weather":
+        city = arguments["city"]
+        try:
+            url = f"https://wttr.in/{city}?format=j1"
+            r = requests.get(url, timeout=10)
+            d = r.json()["current_condition"][0]
+            return f"Weather in {city}: {d['temp_C']}°C, {d['weatherDesc'][0]['value']}, Humidity: {d['humidity']}%"
+        except Exception as e:
+            return f"Weather error: {e}"
+
+    elif tool_name == "get_tech_news":
+        topic = arguments["topic"]
+        count = arguments.get("count", 5)
+        try:
+            url = f"https://hn.algolia.com/api/v1/search?query={topic}&hitsPerPage={count}&tags=story"
+            r = requests.get(url, timeout=10)
+            hits = r.json().get("hits", [])
+            news = [f"{i}. {h.get('title','')}" for i, h in enumerate(hits, 1)]
+            return f"News about '{topic}':\n" + "\n".join(news)
+        except Exception as e:
+            return f"News error: {e}"
+
+    elif tool_name == "calculate":
+        expression = arguments["expression"]
+        try:
+            result = eval(expression, {"math": math, "__builtins__": {}})
+            return f"{expression} = {result}"
+        except Exception as e:
+            return f"Calculation error: {e}"
+
+    elif tool_name == "qualify_lead":
+        name = arguments["name"]
+        message = arguments["message"]
+        has_budget = arguments.get("budget", False)
+        score = 50 + (20 if has_budget else 0)
+        if any(w in message.lower() for w in ["urgent", "asap", "approved"]):
+            score += 20
+        elif any(w in message.lower() for w in ["curious", "browsing", "maybe"]):
+            score -= 20
+        status = "QUALIFIED" if score >= 70 else "POTENTIAL" if score >= 50 else "UNQUALIFIED"
+        return f"Lead: {name} | Score: {score}/100 | Status: {status}"
+
+    elif tool_name == "get_study_progress":
+        day = arguments["current_day"]
+        total = 168
+        percent = round((day / total) * 100, 1)
+        hours = day * 6
+        return f"Day {day}/{total} ({percent}%) | Hours studied: {hours} | Days left: {total-day}"
+
+    elif tool_name == "format_automation_report":
+        title = arguments["title"]
+        data = arguments["data"]
+        lines = [f"=== {title} ===", f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"]
+        for k, v in data.items():
+            lines.append(f"• {k}: {v}")
+        return "\n".join(lines)
+
+    return f"Unknown tool: {tool_name}"
+
+    return f"Unknown tool: {tool_name}"
+
+# ── TOOL SCHEMAS (OpenAI-style — Groq uses this format) ──
+tools_schema = [
+    {"type": "function", "function": {
+        "name": "get_weather", "description": "Get current weather for a city",
+        "parameters": {"type": "object", "properties": {
+            "city": {"type": "string", "description": "City name"}}, "required": ["city"]}}},
+    {"type": "function", "function": {
+        "name": "get_tech_news", "description": "Get latest tech/AI news headlines",
+        "parameters": {"type": "object", "properties": {
+            "topic": {"type": "string", "description": "Topic to search"},
+            "count": {"type": "integer", "description": "Number of results"}}, "required": ["topic"]}}},
+    {"type": "function", "function": {
+        "name": "calculate", "description": "Evaluate a math expression",
+        "parameters": {"type": "object", "properties": {
+            "expression": {"type": "string", "description": "Math expression"}}, "required": ["expression"]}}},
+    {"type": "function", "function": {
+        "name": "qualify_lead", "description": "Score a sales lead 0-100",
+        "parameters": {"type": "object", "properties": {
+            "name": {"type": "string"}, "message": {"type": "string"},
+            "budget": {"type": "boolean"}}, "required": ["name", "message"]}}},
+    {"type": "function", "function": {
+        "name": "get_study_progress", "description": "Get Abdullah's learning progress",
+        "parameters": {"type": "object", "properties": {
+            "current_day": {"type": "integer"}}, "required": ["current_day"]}}},
+]
+
+# ── AGENT (bind_tools — modern, stable API) ──────
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage, ToolMessage
+
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0, api_key=GROQ_API_KEY)
+llm_with_tools = llm.bind_tools(tools_schema)
+
+def run_agent(question: str) -> str:
+    messages = [HumanMessage(content=question)]
+    for _ in range(6):  # max iterations
+        ai_msg = llm_with_tools.invoke(messages)
+        messages.append(ai_msg)
+        if not ai_msg.tool_calls:
+            return ai_msg.content
+        for call in ai_msg.tool_calls:
+            result = run_mcp_tool(call["name"], call["args"])
+            messages.append(ToolMessage(content=result, tool_call_id=call["id"]))
+    return "Max iterations reached."
+
+# ── TEST ────────────────────────────────────────
+print("="*55)
+print("🔌 MCP-POWERED AI AGENT")
+print("="*55)
+
+test_questions = [
+    "What is the weather in Lahore?",
+    "Get me the latest news about AI agents",
+    "What is my study progress on Day 23?",
+    "Qualify this lead: Ahmed Khan, message: Our company of 50 needs urgent automation, budget approved",
+]
+
+for q in test_questions:
+    print(f"\n❓ {q}")
+    print(f"✅ Answer: {run_agent(q)}")
