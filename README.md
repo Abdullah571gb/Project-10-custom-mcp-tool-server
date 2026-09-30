@@ -2,13 +2,13 @@
 
 A complete Model Context Protocol (MCP) server exposing 6 custom tools, 2 resources, and 2 prompt templates — built to work as a universal AI tool backend across multiple frameworks and platforms.
 
----
+----
 
 ## 📌 What This Project Does
 
 This project builds a standalone MCP server that any MCP-compatible AI system can plug into and use — instead of building tools separately for every framework, this server exposes them once and connects everywhere.
 
----
+----
 
 ## 🧰 MCP Tools Built
 
@@ -21,21 +21,21 @@ This project builds a standalone MCP server that any MCP-compatible AI system ca
 | **get_study_progress** | Learning journey tracker |
 | **format_automation_report** | Professional report formatting |
 
----
+----
 
 ## 📦 MCP Resources
 
 - `automation://learning-progress`
 - `automation://tool-stack`
 
----
+----
 
 ## 💬 MCP Prompts
 
 - `qualify_lead_prompt`
 - `daily_briefing_prompt`
 
----
+----
 
 ## ⚙️ How It Connects
             Custom MCP Server
@@ -51,7 +51,7 @@ tool wrappers)
 
 One server, multiple ways to connect — no need to rebuild tools separately for each framework.
 
----
+----
 
 ## 🛠️ Tech Stack
 
@@ -63,13 +63,13 @@ One server, multiple ways to connect — no need to rebuild tools separately for
 | **LangChain** | Connects Python agents to the MCP tools |
 | **n8n HTTP Request Node** | Calls MCP tools from n8n workflows |
 
----
+----
 
 ## 💡 Why MCP Matters
 
 MCP works like a universal connector for AI tools — build a tool once, and it becomes usable across any framework or AI client that supports the protocol, rather than rebuilding the same tool separately for every platform.
 
----
+----
 
 ## 📷 Screenshots
 
@@ -82,13 +82,13 @@ MCP works like a universal connector for AI tools — build a tool once, and it 
 ![n8n Integration](output-n8n-integration.png)
 *n8n calling an MCP tool via the HTTP wrapper*
 
----
+----
 
 ## 🎯 Key Learning
 
 How to design and build an MCP server that exposes tools, resources, and prompts in a standardized way — and how to connect that single server to multiple different clients (Python agents, n8n, and any MCP-compatible tool) without duplicating logic.
 
----
+----
 
 ## 👤 Author
 
