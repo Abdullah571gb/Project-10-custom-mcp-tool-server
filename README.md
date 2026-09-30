@@ -1,4 +1,4 @@
-# 🔌 Project 10: Custom MCP Tool Server
+# 🔌 Project 9: Custom MCP Tool Server
 
 A complete Model Context Protocol (MCP) server exposing 6 custom tools, 2 resources, and 2 prompt templates — built to work as a universal AI tool backend across multiple frameworks and platforms.
 
